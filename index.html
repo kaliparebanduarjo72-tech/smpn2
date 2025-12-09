@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LKPD: Budidaya Tanaman Tebu Interaktif</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         /* --- 1. GENERAL & BASE STYLING (UNTUK TAMPILAN RAPI) --- */
         body {
@@ -189,11 +187,11 @@
         }
         .btn-add { background-color: #4CAF50; color: white; }
         .btn-remove { background-color: #f44336; color: white; padding: 4px 6px; font-size: 0.75em; margin-left: 5px; }
-        /* WARNA HIJAU UNTUK PDF/DOWNLOAD */
-        .btn-download { background-color: #007bff; color: white; } 
+        /* WARNA BIRU UNTUK PRINT/DOWNLOAD PDF */
+        .btn-download { background-color: #4682B4; color: white; } 
         .btn-preview { background-color: #FF9800; color: white; }
         .btn-share { background-color: #25D366; color: white; }
-        .btn-show-list { background-color: #4682B4; color: white; padding: 6px 10px; font-size: 0.85em; }
+        .btn-show-list { background-color: #8FBC8F; color: white; padding: 6px 10px; font-size: 0.85em; }
 
         /* --- Footer --- */
         footer { 
@@ -231,6 +229,7 @@
         }
 
         /* --- 4. PRINT STYLING (Untuk Kertas Legal dan Margin 2cm) --- */
+        /* PENTING: Style ini memastikan input terlihat rapi saat dicetak/disimpan ke PDF */
         @media print {
             @page {
                 size: legal; 
@@ -243,6 +242,7 @@
                 color: #000;
             }
             
+            /* Sembunyikan semua kecuali container */
             body > *:not(.container) {
                 display: none;
             }
@@ -254,15 +254,24 @@
                 border-radius: 0;
             }
             
+            /* Sembunyikan tombol-tombol aksi saat mencetak */
             .action-container, .btn, .btn-remove, .btn-add, header, .btn-show-list {
                 display: none !important;
             }
             
+            /* Pastikan Input dan Select terlihat seperti teks */
             input, select, textarea {
                 border: none !important;
                 background-color: transparent !important;
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
+                font-weight: bold; /* Teks isian lebih tebal */
+                padding: 0 !important;
+            }
+
+            /* Hapus Border pada Input/Textarea jika ada */
+            table input[type="text"], table input[type="number"], table textarea, select {
+                border: none !important;
             }
             
             .container::before {
@@ -270,12 +279,20 @@
                 width: 70%;
                 height: 70%;
             }
+            
+            /* Pastikan warna latar belakang tercetak (penting untuk summary/header tabel) */
+            .summary-row td, .keuntungan-row td, table th {
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact; 
+            }
         }
         
         /* Modal Styles */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); }
         .modal-content { background-color: #fefefe; margin: 5% auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 700px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
         .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+        
+        /* Loading overlay (dihapus karena tidak dibutuhkan lagi) */
     </style>
 </head>
 <body>
@@ -293,7 +310,7 @@
         <div class="action-container">
             <button class="btn btn-preview" onclick="showPreview()">👁️ Pratinjau</button>
             <button class="btn btn-share" onclick="shareToWhatsApp()">📲 Instruksi WhatsApp</button>
-            <button class="btn btn-download" onclick="downloadPDF()">💾 Unduh sebagai PDF</button>
+            <button class="btn btn-download" onclick="printPDF()">🖨️ Cetak / Simpan ke PDF</button>
         </div>
 
         <section id="identitas">
@@ -550,7 +567,8 @@
             
             function formatRupiah(number) {
                 if (isNaN(number)) return '0';
-                return number.toLocaleString('id-ID');
+                // Menggunakan IDR locale untuk format Rupiah
+                return number.toLocaleString('id-ID'); 
             }
 
             function calculateRowTotal(row, costPerUnit) {
@@ -561,6 +579,7 @@
                     return costPerUnit * quantity;
                 } else if (row === 6) { 
                     const hasilPanenInput = document.querySelector(`.input-unit-cost[data-row="5"]`);
+                    // Gunakan nilai input hasil panen (row 5) sebagai kuantitas untuk row 6 (harga jual rata-rata)
                     quantity = parseFloat(hasilPanenInput.value) || 0;
                     return costPerUnit * quantity;
                 }
@@ -671,81 +690,10 @@
             }
         }
 
-        // --- FUNGSI DOWNLOAD KE PDF (MENGGUNAKAN JSPDF DAN HTML2CANVAS) ---
-        function downloadPDF() {
-            const content = document.getElementById('lkpd-content');
-            
-            // 1. Membersihkan konten sebelum konversi
-            const originalContents = content.innerHTML;
-            
-            // Hapus tombol-tombol yang tidak perlu di PDF (Duplikasi fungsi dari downloadWord sebelumnya)
-            const cleanContent = content.cloneNode(true);
-            cleanContent.querySelector('.action-container').remove();
-            cleanContent.querySelectorAll('.btn-remove, .btn-add, .btn-show-list').forEach(btn => btn.remove());
-            
-            cleanContent.querySelectorAll('#tabel-anggota th:last-child, #tabel-pertanyaan th:last-child, #tabel-kolaborasi th:last-child').forEach(th => {
-                if (th.textContent.trim() === 'Aksi') {
-                    th.remove();
-                }
-            });
-
-            // Ganti Input/Textarea dengan Nilai mereka agar muncul di PDF
-            cleanContent.querySelectorAll('input, textarea, select').forEach(el => {
-                let value = '';
-                if (el.tagName === 'SELECT') {
-                    value = el.options[el.selectedIndex].text.replace('-- Pilih Kelas --', '');
-                } else {
-                    value = el.value.trim() || '____________________';
-                }
-                
-                const span = document.createElement('span');
-                span.textContent = value;
-                span.style.fontWeight = 'bold'; 
-                span.style.display = 'block'; 
-                span.style.whiteSpace = 'pre-wrap';
-                
-                el.parentNode.replaceChild(span, el);
-            });
-            
-            // Masukkan konten yang sudah dibersihkan kembali ke elemen sementara untuk konversi
-            content.innerHTML = cleanContent.innerHTML;
-
-            // 2. Proses Konversi HTML ke Canvas lalu ke PDF
-            window.jsPDF = window.jspdf.jsPDF;
-            const pdf = new jsPDF('p', 'mm', 'a4'); 
-            const margin = 10;
-            const pageWidth = pdf.internal.pageSize.getWidth() - 2 * margin;
-
-            html2canvas(content, {
-                scale: 2, // Meningkatkan kualitas gambar
-                useCORS: true, // Untuk menangani logo
-            }).then(canvas => {
-                const imgData = canvas.toDataURL('image/png');
-                const imgProps = pdf.getImageProperties(imgData);
-                const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
-                let heightLeft = imgHeight;
-                let position = 0;
-
-                pdf.addImage(imgData, 'PNG', margin, position + margin, pageWidth, imgHeight);
-                heightLeft -= pdf.internal.pageSize.getHeight();
-                
-                // Menangani Multipage
-                while (heightLeft > -100) { // Toleransi kecil
-                    position = heightLeft - imgHeight;
-                    pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', margin, position + margin, pageWidth, imgHeight);
-                    heightLeft -= pdf.internal.pageSize.getHeight();
-                }
-
-                pdf.save(`LKPD_Tebu_${document.getElementById('group-class').value || 'Kelompok'}.pdf`);
-                
-                // 3. Mengembalikan konten asli ke halaman setelah konversi selesai
-                content.innerHTML = originalContents; 
-                alert('File LKPD berhasil diunduh sebagai PDF!');
-                
-                // Memastikan input tetap berfungsi setelah konten dikembalikan
-                document.dispatchEvent(new Event('DOMContentLoaded'));
-            });
+        // --- FUNGSI BARU: PRINT/SAVE TO PDF ---
+        function printPDF() {
+            // Memanggil fungsi cetak bawaan browser
+            window.print();
         }
         
         // --- FUNGSI INSTRUKSI WHATSAPP ---
@@ -754,22 +702,23 @@
 
             const message = `*INSTRUKSI PENGIRIMAN FILE LKPD*\n\n` +
                             `Halo, saya perwakilan dari ${classValue}.\n\n` +
-                            `1. Tekan tombol *💾 Unduh sebagai PDF* di halaman LKPD.\n` +
-                            `2. Cari file PDF yang baru diunduh (nama file: LKPD_Tebu_...). \n` +
-                            `3. Bagikan file PDF tersebut secara manual ke grup atau guru yang dituju.\n\n` +
+                            `1. Tekan tombol *🖨️ Cetak / Simpan ke PDF*.\n` +
+                            `2. Pada dialog yang muncul, ubah *Tujuan* menjadi *Simpan sebagai PDF* (atau *Save as PDF*).\n` +
+                            `3. Simpan file tersebut ke perangkat Anda. \n` +
+                            `4. Bagikan file PDF tersebut secara manual ke WhatsApp.\n\n` +
                             `Terima kasih!`;
             
             const encodedMessage = encodeURIComponent(message);
             
             // Memberikan instruksi dan kemudian membuka WhatsApp dengan pesan instruksi
-            alert('PERHATIAN: Tidak bisa mengirim file PDF langsung ke WhatsApp. Anda akan diarahkan ke WhatsApp untuk mengirim pesan INSTRUKSI. Mohon unduh file PDF terlebih dahulu!');
+            alert('PERHATIAN: Anda akan diarahkan ke dialog Cetak browser. Pilih "Simpan sebagai PDF" di sana untuk menyimpan file. Setelah ini, Anda akan diarahkan ke WhatsApp untuk mengirim pesan INSTRUKSI.');
             window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
         }
 
         // --- FUNGSI PRATINJAU (PREVIEW) & MODAL ---
         
         function getCleanedLKPDContent() {
-            // ... (Fungsi yang sama seperti sebelumnya untuk pratinjau, tidak diubah) ...
+            // Fungsi ini membantu menampilkan pratinjau data yang sudah diisi
             const contentElement = document.getElementById('lkpd-content').cloneNode(true);
             
             contentElement.querySelector('.action-container').remove();
@@ -845,14 +794,6 @@
                 guruModal.style.display = "none";
             }
         }
-        
-        // --- FUNGSI DOWNLOAD KE MS. WORD (DINONAKTIFKAN, DIGANTI DOWNLOAD PDF) ---
-        /*
-        function downloadWord() {
-            // ... (Logic for Word download) ...
-        }
-        */
-        
     </script>
 </body>
 </html>

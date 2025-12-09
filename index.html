@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LKPD: Budidaya Tanaman Tebu Interaktif</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* --- 1. GENERAL & BASE STYLING (UNTUK TAMPILAN RAPI) --- */
+        body {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+            position: relative; 
+            font-size: 16px;
+        }
+
+        .container {
+            width: 95%; 
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 30px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: relative; 
+            z-index: 10; 
+        }
+
+        /* --- 2. WATERMARK STYLING (KODE LOGO TRANSPARAN) --- */
+        .container::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 60%; 
+            height: 60%;
+            /* PANGGIL LOGO UNTUK WATERMARK */
+            background-image: url('logo92.png'); 
+            background-repeat: no-repeat;
+            background-size: contain;
+            background-position: center;
+            /* OPASITAS 0.08 UNTUK EFEK TRANSPARAN */
+            opacity: 0.08; 
+            z-index: 1; 
+            transform: translate(-50%, -50%); 
+            pointer-events: none; 
+        }
+        
+        /* Header Styling */
+        header {
+            background-color: #556B2F; 
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        /* LOGO SEKOLAH DI HEADER */
+        .header-logo img {
+            height: 50px; 
+            width: auto;
+            background: white; 
+            padding: 3px;
+            border-radius: 5px;
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 1.6em;
+            line-height: 1.2;
+        }
+        header p { margin: 2px 0; font-size: 0.8em; }
+
+
+        /* Judul Section */
+        h2 { 
+            color: #8FBC8F; 
+            border-bottom: 3px solid #8FBC8F; 
+            padding-bottom: 5px; 
+            margin-top: 25px; 
+            font-size: 1.5em;
+        }
+        h3 { 
+            color: #4682B4; 
+            margin-top: 20px; 
+            font-size: 1.2em;
+        }
+        .tujuan { 
+            font-style: italic; 
+            color: #666; 
+            border-left: 4px solid #F0E68C; 
+            padding-left: 10px; 
+            font-size: 0.9em;
+        }
+
+        /* Group input untuk Kelas/Guru Pendamping/Wawancara */
+        .form-group-inline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .form-group-inline label {
+            font-weight: 600;
+            white-space: nowrap; 
+        }
+        
+        /* Style untuk penempatan input dan tombol guru */
+        .guru-pendamping-group {
+            display: flex;
+            flex-grow: 1;
+            align-items: center;
+            gap: 10px;
+            min-width: 300px;
+        }
+
+        /* --- Table Styling --- */
+        .table-responsive { 
+            overflow-x: auto; 
+            margin-bottom: 15px; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 10px; 
+            font-size: 0.85em; 
+            min-width: 600px; 
+        }
+        table th, table td { 
+            padding: 8px 10px; 
+            border: 1px solid #ddd; 
+            text-align: left; 
+            vertical-align: top; 
+        }
+        table th { 
+            background-color: #DDA0DD; 
+            color: white; 
+            font-weight: 600; 
+        }
+        
+        /* Input dan Select di dalam Tabel */
+        table input[type="text"], table input[type="number"], table textarea, select {
+            width: 98%; 
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+            resize: vertical;
+            font-size: 1em;
+        }
+        textarea.full-width-textarea { width: 100%; font-size: 0.9em; }
+        
+        /* Biaya Summary */
+        .summary-row td { background-color: #F0E68C; font-weight: 700 !important; }
+        .keuntungan-row td { background-color: #8FBC8F; color: #333; font-size: 1em; }
+        .summary-total { text-align: right !important; padding-right: 15px !important; }
+
+        /* --- Button Styling --- */
+        .action-container { 
+            margin-top: 20px; 
+            display: flex; 
+            gap: 8px; 
+            flex-wrap: wrap; 
+            justify-content: flex-end; 
+        }
+        .btn { 
+            padding: 8px 12px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            transition: background-color 0.3s;
+            font-size: 0.9em;
+        }
+        .btn-add { background-color: #4CAF50; color: white; }
+        .btn-remove { background-color: #f44336; color: white; padding: 4px 6px; font-size: 0.75em; margin-left: 5px; }
+        /* WARNA HIJAU UNTUK PDF/DOWNLOAD */
+        .btn-download { background-color: #007bff; color: white; } 
+        .btn-preview { background-color: #FF9800; color: white; }
+        .btn-share { background-color: #25D366; color: white; }
+        .btn-show-list { background-color: #4682B4; color: white; padding: 6px 10px; font-size: 0.85em; }
+
+        /* --- Footer --- */
+        footer { 
+            text-align: center; 
+            padding: 10px; 
+            background-color: #556B2F; 
+            color: white; 
+            margin-top: 20px; 
+            font-size: 0.8em; 
+        }
+        
+        /* --- 3. MOBILE RESPONSIVENESS (Di bawah 768px, untuk HP) --- */
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+                padding: 15px;
+                margin: 10px auto;
+            }
+            .header-logo { flex-direction: column; }
+            .header-logo img { height: 40px; }
+            header h1 { font-size: 1.4em; }
+
+            .action-container { justify-content: center; }
+            .btn { width: 48%; margin-bottom: 5px; } 
+            
+            .form-group-inline { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .form-group-inline label { width: 100%; }
+            #group-class { width: 100% !important; }
+            .guru-pendamping-group { flex-direction: column; align-items: stretch; gap: 5px; width: 100%; }
+            .guru-pendamping-group input { flex-grow: 1; }
+            .guru-pendamping-group button { width: 100%; }
+            
+            table { font-size: 0.8em; }
+            table th, table td { padding: 6px 8px; }
+        }
+
+        /* --- 4. PRINT STYLING (Untuk Kertas Legal dan Margin 2cm) --- */
+        @media print {
+            @page {
+                size: legal; 
+                margin: 2cm; 
+            }
+
+            body {
+                background-color: white !important;
+                font-size: 12pt;
+                color: #000;
+            }
+            
+            body > *:not(.container) {
+                display: none;
+            }
+            .container {
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                border-radius: 0;
+            }
+            
+            .action-container, .btn, .btn-remove, .btn-add, header, .btn-show-list {
+                display: none !important;
+            }
+            
+            input, select, textarea {
+                border: none !important;
+                background-color: transparent !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+            
+            .container::before {
+                opacity: 0.04; 
+                width: 70%;
+                height: 70%;
+            }
+        }
+        
+        /* Modal Styles */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 700px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
+        .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-logo">
+            <img src="logo92.png" alt="Logo SMP Negeri 02 Kalipare">
+            <div>
+                <p>SMP Negeri 02 Kalipare</p>
+                <h1>🌾 LKPD: Menggali Potensi Budidaya Tanaman Tebu</h1>
+            </div>
+        </div>
+    </header>
+
+    <div class="container" id="lkpd-content">
+        <div class="action-container">
+            <button class="btn btn-preview" onclick="showPreview()">👁️ Pratinjau</button>
+            <button class="btn btn-share" onclick="shareToWhatsApp()">📲 Instruksi WhatsApp</button>
+            <button class="btn btn-download" onclick="downloadPDF()">💾 Unduh sebagai PDF</button>
+        </div>
+
+        <section id="identitas">
+            <h2>A. Identitas Kelompok</h2>
+            
+            <div class="form-group-inline">
+                <label for="group-class">Kelas:</label>
+                <select id="group-class" name="group-class" style="width: 150px;">
+                    <option value="">-- Pilih Kelas --</option>
+                    <option value="7A">7A</option>
+                    <option value="7B">7B</option>
+                    <option value="8A">8A</option>
+                    <option value="8B">8B</option>
+                    <option value="9A">9A</option>
+                    <option value="9B">9B</option>
+                </select>
+                
+                <label for="guru-pendamping">Guru Pendamping:</label>
+                <div class="guru-pendamping-group">
+                    <input type="text" id="guru-pendamping" name="guru-pendamping" placeholder="Nama Guru Pendamping" style="flex-grow: 1;">
+                    <button class="btn btn-show-list" onclick="showGuruPendampingModal()">Lihat Daftar Guru</button>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table id="tabel-anggota">
+                    <thead>
+                        <tr><th>No.</th><th>Nama Anggota</th><th>NIS</th><th>Peran dalam Kelompok</th><th>Aksi</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr data-row-id="1"><td>1</td><td><input type="text" value=""></td><td><input type="text" value=""></td><td>Ketua Tim/Juru Bicara</td><td><button class="btn-remove" onclick="removeRow(this)">Hapus</button></td></tr>
+                        <tr data-row-id="2"><td>2</td><td><input type="text" value=""></td><td><input type="text" value=""></td><td>Juru Tulis/Dokumentator</td><td><button class="btn-remove" onclick="removeRow(this)">Hapus</button></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <button class="btn btn-add" onclick="addRow('tabel-anggota', 'Identitas')">➕ Tambah Anggota</button>
+            
+            <br>
+            <h3>Mata Pelajaran Kolaborasi & Guru Pengampu</h3>
+            <div class="table-responsive">
+                <table id="tabel-kolaborasi">
+                    <thead>
+                        <tr><th>No.</th><th>Mata Pelajaran</th><th>NIP</th><th>Guru Pengampu</th><th>Aksi</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr data-row-id="1">
+                            <td>1</td>
+                            <td><input type="text" placeholder="Contoh: Bahasa Indonesia"></td>
+                            <td><input type="text"></td>
+                            <td><input type="text"></td>
+                            <td><button class="btn-remove" onclick="removeRow(this)">Hapus</button></td>
+                        </tr>
+                        <tr data-row-id="2">
+                            <td>2</td>
+                            <td><input type="text" placeholder="Contoh: IPS"></td>
+                            <td><input type="text"></td>
+                            <td><input type="text"></td>
+                            <td><button class="btn-remove" onclick="removeRow(this)">Hapus</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button class="btn btn-add" onclick="addRow('tabel-kolaborasi', 'Kolaborasi')">➕ Tambah Mata Pelajaran</button>
+        </section>
+
+        <hr>
+
+        <section id="wawancara">
+            <h2>B. Tahap 1: Wawancara dan Pengumpulan Data</h2>
+            <p class="tujuan">Tujuan: Siswa mampu menyusun pertanyaan yang efektif dan mengumpulkan data primer tentang budidaya tebu serta aspek sosial-ekonominya.</p>
+            
+            <h3>Kegiatan 1.1: Persiapan Wawancara (Bahasa Indonesia)</h3>
+            <p>Tentukan satu (1) narasumber petani tebu yang akan diwawancarai di sekitar Kalipare. Susunlah minimal 10 pertanyaan yang terstruktur, mencakup 3 aspek utama (teknik tanam, biaya, dan hasil).</p>
+            <div class="table-responsive">
+                <table id="tabel-pertanyaan">
+                    <thead>
+                        <tr><th>No.</th><th>Aspek Wawancara</th><th>Contoh Pertanyaan</th><th>Aksi</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr data-row-id="1"><td>1</td><td>Identitas/Pengalaman</td><td>Sudah berapa lama Bapak/Ibu menjadi petani tebu?</td><td><button class="btn-remove" onclick="removeRow(this)">Hapus</button></td></tr>
+                        <tr data-row-id="2"><td>2</td><td>Teknik Budidaya</td><td><textarea rows="2"></textarea></td><td><button class="btn-remove" onclick="removeRow(this)">Hapus</button></td></tr>
+                        <tr data-row-id="3"><td>3</td><td>Aspek Ekonomi (Biaya)</td><td><textarea rows="2"></textarea></td><td><button class="btn-remove" onclick="removeRow(this)">Hapus</button></td></tr>
+                        <tr data-row-id="4"><td>4</td><td>Aspek Ekonomi (Hasil)</td><td><textarea rows="2"></textarea></td><td><button class="btn-remove" onclick="removeRow(this)">Hapus</button></td></tr>
+                        <tr data-row-id="5"><td>5</td><td>Tantangan/Kendala</td><td><textarea rows="2"></textarea></td><td><button class="btn-remove" onclick="removeRow(this)">Hapus</button></td></tr>
+                        <tr data-row-id="6"><td>6</td><td>Harapan/Saran</td><td><textarea rows="2"></textarea></td><td><button class="btn-remove" onclick="removeRow(this)">Hapus</button></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <button class="btn btn-add" onclick="addRow('tabel-pertanyaan', 'Pertanyaan')">➕ Tambah Pertanyaan</button>
+
+            <h3>Kegiatan 1.2: Pelaksanaan Wawancara (IPS)</h3>
+            <div class="form-group-inline">
+                <label>Tanggal Wawancara:</label><input type="date">
+                <label>Nama Narasumber:</label><input type="text">
+                <label>Lokasi Wawancara:</label><input type="text">
+            </div>
+            <p>Catatlah rangkuman jawaban narasumber pada kolom di bawah ini (gunakan bahasa yang santun):</p>
+            <textarea class="full-width-textarea" rows="10" placeholder="Rangkuman Jawaban Narasumber"></textarea>
+        </section>
+
+        <hr>
+
+        <section id="analisis">
+            <h2>C. Tahap 2: Analisis Teknik Budidaya dan Ekonomi</h2>
+            <p class="tujuan">Tujuan: Siswa mampu menganalisis teknik budidaya yang digunakan serta menghitung aspek ekonomi dan efisiensi pertanian tebu.</p>
+            
+            <h3>Kegiatan 2.1: Analisis Teknik Budidaya (IPA)</h3>
+            <p>Jawablah pertanyaan di bawah ini berdasarkan data wawancara (dan riset tambahan):</p>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr><th>No.</th><th>Pertanyaan Analisis</th><th>Jawaban Kelompok/Temuan</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>1</td><td>Jenis varietas tebu apa yang paling banyak ditanam di Kalipare?</td><td><textarea rows="2"></textarea></td></tr>
+                        <tr><td>2</td><td>Berapa lama siklus tanam tebu hingga panen (bulan/tahun)?</td><td><textarea rows="2"></textarea></td></tr>
+                        <tr><td>3</td><td>Jelaskan tahapan pemupukan yang dilakukan (jenis pupuk dan frekuensi)!</td><td><textarea rows="2"></textarea></td></tr>
+                        <tr><td>4</td><td>Tantangan hama atau penyakit apa yang paling sering dialami petani?</td><td><textarea rows="2"></textarea></td></tr>
+                        <tr><td>5</td><td>"Menurut Bapak/Ibu Petani, apakah metode tanam tradisional lebih baik dari modern? Mengapa?"</td><td><textarea rows="2"></textarea></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Kegiatan 2.2: Analisis Biaya dan Hasil (Matematika)</h3>
+            <p>Hitunglah asumsi dasar biaya produksi per **1 Hektar** lahan tebu (gunakan perkiraan data dari narasumber):</p>
+            <div class="table-responsive">
+                <table id="tabel-biaya">
+                    <thead>
+                        <tr><th>No.</th><th>Jenis Biaya</th><th>Satuan</th><th>Biaya per Satuan (Rp)</th><th>Total Biaya (Rp)</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>1</td><td>Bibit Tebu</td><td>Kg / Kuwintal</td><td><input type="number" class="input-unit-cost" data-row="1" value="0"></td><td class="total-cost" id="total-cost-1">0</td></tr>
+                        <tr><td>2</td><td>Pupuk Total</td><td>Kg</td><td><input type="number" class="input-unit-cost" data-row="2" value="0"></td><td class="total-cost" id="total-cost-2">0</td></tr>
+                        <tr><td>3</td><td>Upah Tenaga Kerja (Tanam & Rawat)</td><td>Hari Orang Kerja (HOK)</td><td><input type="number" class="input-unit-cost" data-row="3" value="0"></td><td class="total-cost" id="total-cost-3">0</td></tr>
+                        <tr class="summary-row"><td>4</td><td colspan="3"><strong>TOTAL BIAYA PRODUKSI (A)</strong></td><td class="summary-total" id="total-biaya-produksi">0</td></tr>
+                        <tr><td>5</td><td>Pendapatan Kotor: Hasil Panen</td><td>Ton/Ha</td><td><input type="number" class="input-unit-cost" data-row="5" value="0"></td><td class="total-cost" id="total-cost-5">0</td></tr>
+                        <tr><td>6</td><td>Harga Jual Rata-rata</td><td>Rp/Ton</td><td><input type="number" class="input-unit-cost" data-row="6" value="0"></td><td class="total-cost" id="total-cost-6">0</td></tr>
+                        <tr class="summary-row"><td>7</td><td colspan="3"><strong>TOTAL PENDAPATAN KOTOR (B)</strong></td><td class="summary-total" id="total-pendapatan-kotor">0</td></tr>
+                        <tr class="keuntungan-row"><td>8</td><td colspan="3"><strong>KEUNTUNGAN BERSIH (B - A)</strong></td><td class="summary-total" id="keuntungan-bersih">0</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <hr>
+
+        <section id="presentasi">
+            <h2>D. Tahap 3: Presentasi Hasil Diskusi</h2>
+            <p class="tujuan">Tujuan: Siswa mampu menyajikan temuan wawancara dan hasil analisis secara informatif dan persuasif.</p>
+            
+            <h3>Kegiatan 3.1: Pembuatan Media (TIK)</h3>
+            <p>Buatlah media presentasi digital... minimal **8 slide** dengan struktur berikut:</p>
+            <ol>
+                <li>Slide 1: Judul Proyek, Identitas Kelompok.</li>
+                <li>Slide 2: Profil Narasumber.</li>
+                <li>Slide 3: Rangkuman Teknik Budidaya (Temuan IPA).</li>
+                <li>Slide 4: Rangkuman Aspek Ekonomi (Temuan Matematika).</li>
+                <li>Slide 5: Grafik/Tabel Perhitungan Biaya (Poin C.2.2).</li>
+                <li>Slide 6: Tantangan & Solusi yang Diusulkan Kelompok.</li>
+                <li>Slide 7: Kesimpulan dan Saran.</li>
+                <li>Slide 8: Penutup/Dokumentasi.</li>
+            </ol>
+            
+            <h3>Kegiatan 3.2: Pelaksanaan Presentasi (Bahasa Indonesia)</h3>
+            <p>Berikan kesimpulan yang kuat mengenai potensi dan tantangan budidaya tebu di Kalipare.</p>
+            <textarea class="full-width-textarea" rows="5" placeholder="Tuliskan Kesimpulan Kuat Kelompok..."></textarea>
+        </section>
+
+    </div>
+
+    <footer>
+        <p>&copy; 2025 LKPD Kolaborasi Siswa - SMP Negeri 2 Kalipare</p>
+    </footer>
+
+    <div id="preview-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closePreview()">&times;</span>
+            <h2>Pratinjau LKPD Budidaya Tanaman Tebu</h2>
+            <div id="preview-body"></div>
+        </div>
+    </div>
+    
+    <div id="guru-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeGuruModal()">&times;</span>
+            <h2>Daftar Guru Pendamping Kelas</h2>
+            <div id="guru-list-body"></div>
+        </div>
+    </div>
+
+
+    <script>
+        // Data Guru Pendamping diambil dari file yang diunggah.
+        const guruPendampingData = [
+            { no: 1, nama: "Sulistiono, Imarotul Faudah", kelas: "7A" },
+            { no: 2, nama: "Bambang Rudi, Sutono", kelas: "7B" },
+            { no: 3, nama: "Novita K. M., Lilis Setyowati", kelas: "8A" },
+            { no: 4, nama: "Ribuati, Abdul Rohim", kelas: "8B" },
+            { no: 5, nama: "Sugiato, Susmining Hartini", kelas: "9A" },
+            { no: 6, nama: "Dwi Susanti, N. Agustina", kelas: "9B" }
+        ];
+
+        function showGuruPendampingModal() {
+            const modal = document.getElementById('guru-modal');
+            const body = document.getElementById('guru-list-body');
+            
+            let htmlContent = `
+                <p style="font-style: italic;">Data ini berdasarkan daftar kegiatan kokurikuler SMP Negeri 2 Kalipare, Semester Ganjil TP 2025-2026.</p>
+                <div class="table-responsive">
+                    <table style="min-width: 400px; font-size: 0.9em;">
+                        <thead>
+                            <tr style="background-color: #4682B4;">
+                                <th style="color: white;">No.</th>
+                                <th style="color: white;">Pendamping Kelas</th>
+                                <th style="color: white;">Nama Guru</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            guruPendampingData.forEach(data => {
+                htmlContent += `
+                    <tr>
+                        <td>${data.no}</td>
+                        <td>${data.kelas}</td>
+                        <td>${data.nama}</td>
+                    </tr>
+                `;
+            });
+
+            htmlContent += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            body.innerHTML = htmlContent;
+            modal.style.display = "block";
+        }
+
+        function closeGuruModal() {
+            document.getElementById('guru-modal').style.display = "none";
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const tableBiaya = document.getElementById('tabel-biaya');
+            const inputUnitCosts = tableBiaya.querySelectorAll('.input-unit-cost');
+
+            const unitQuantities = {
+                1: 500, // Asumsi Bibit: 500 kg atau 5 Kuwintal per Ha
+                2: 800, // Asumsi Pupuk: 800 kg per Ha
+                3: 150  // Asumsi Tenaga Kerja: 150 HOK per Ha
+            };
+            
+            function formatRupiah(number) {
+                if (isNaN(number)) return '0';
+                return number.toLocaleString('id-ID');
+            }
+
+            function calculateRowTotal(row, costPerUnit) {
+                let quantity = 0;
+                
+                if (row <= 3) {
+                    quantity = unitQuantities[row] || 0;
+                    return costPerUnit * quantity;
+                } else if (row === 6) { 
+                    const hasilPanenInput = document.querySelector(`.input-unit-cost[data-row="5"]`);
+                    quantity = parseFloat(hasilPanenInput.value) || 0;
+                    return costPerUnit * quantity;
+                }
+                return 0;
+            }
+
+            function updateCalculations() {
+                let totalBiayaProduksi = 0;
+                let totalPendapatanKotor = 0;
+
+                inputUnitCosts.forEach(input => {
+                    const row = parseInt(input.dataset.row);
+                    const costPerUnit = parseFloat(input.value) || 0;
+                    const totalCostElement = document.getElementById(`total-cost-${row}`);
+                    let rowTotal = 0;
+
+                    if (row <= 3) {
+                        rowTotal = calculateRowTotal(row, costPerUnit);
+                        totalBiayaProduksi += rowTotal;
+                    } else if (row === 6) {
+                        rowTotal = calculateRowTotal(row, costPerUnit);
+                        totalPendapatanKotor = rowTotal;
+                        document.getElementById('total-pendapatan-kotor').textContent = formatRupiah(totalPendapatanKotor);
+                    }
+                    
+                    totalCostElement.textContent = formatRupiah(rowTotal);
+                });
+
+                document.getElementById('total-biaya-produksi').textContent = formatRupiah(totalBiayaProduksi);
+                const keuntunganBersih = totalPendapatanKotor - totalBiayaProduksi;
+                document.getElementById('keuntungan-bersih').textContent = formatRupiah(keuntunganBersih);
+                
+                const keuntunganElement = document.getElementById('keuntungan-bersih').closest('tr');
+                if (keuntunganBersih < 0) {
+                    keuntunganElement.style.backgroundColor = '#F08080'; 
+                } else {
+                    keuntunganElement.style.backgroundColor = '#8FBC8F';
+                }
+            }
+
+            inputUnitCosts.forEach(input => {
+                input.addEventListener('input', updateCalculations);
+            });
+
+            updateCalculations();
+            updateRowNumbers('tabel-anggota');
+            updateRowNumbers('tabel-pertanyaan');
+            updateRowNumbers('tabel-kolaborasi');
+        });
+        
+        // --- FUNGSI TAMBAH/HAPUS BARIS ---
+        function updateRowNumbers(tableId) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            const rows = tbody.querySelectorAll('tr');
+            
+            let counter = 1;
+            rows.forEach(row => {
+                const numCell = row.cells[0];
+                numCell.textContent = counter++;
+            });
+        }
+        
+        function addRow(tableId, type) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            const newRow = tbody.insertRow();
+            const rowCount = tbody.rows.length + 1;
+
+            let content = '';
+            if (type === 'Identitas') {
+                content = `
+                    <td>${rowCount}</td>
+                    <td><input type="text"></td>
+                    <td><input type="text"></td>
+                    <td><input type="text" placeholder="Peran Lain"></td>
+                    <td><button class="btn-remove" onclick="removeRow(this)">Hapus</button></td>
+                `;
+            } else if (type === 'Pertanyaan') {
+                content = `
+                    <td>${rowCount}</td>
+                    <td><input type="text" placeholder="Aspek Lain"></td>
+                    <td><textarea rows="2" placeholder="Tuliskan pertanyaan..."></textarea></td>
+                    <td><button class="btn-remove" onclick="removeRow(this)">Hapus</button></td>
+                `;
+            } else if (type === 'Kolaborasi') {
+                content = `
+                    <td>${rowCount}</td>
+                    <td><input type="text" placeholder="Contoh: Matematika"></td>
+                    <td><input type="text"></td>
+                    <td><input type="text"></td>
+                    <td><button class="btn-remove" onclick="removeRow(this)">Hapus</button></td>
+                `;
+            }
+
+            newRow.innerHTML = content;
+            updateRowNumbers(tableId);
+        }
+
+        function removeRow(buttonElement) {
+            const row = buttonElement.closest('tr');
+            const tableId = row.closest('table').id;
+            row.remove();
+            updateRowNumbers(tableId);
+            
+            if (tableId === 'tabel-biaya') {
+                document.dispatchEvent(new Event('DOMContentLoaded')); 
+            }
+        }
+
+        // --- FUNGSI DOWNLOAD KE PDF (MENGGUNAKAN JSPDF DAN HTML2CANVAS) ---
+        function downloadPDF() {
+            const content = document.getElementById('lkpd-content');
+            
+            // 1. Membersihkan konten sebelum konversi
+            const originalContents = content.innerHTML;
+            
+            // Hapus tombol-tombol yang tidak perlu di PDF (Duplikasi fungsi dari downloadWord sebelumnya)
+            const cleanContent = content.cloneNode(true);
+            cleanContent.querySelector('.action-container').remove();
+            cleanContent.querySelectorAll('.btn-remove, .btn-add, .btn-show-list').forEach(btn => btn.remove());
+            
+            cleanContent.querySelectorAll('#tabel-anggota th:last-child, #tabel-pertanyaan th:last-child, #tabel-kolaborasi th:last-child').forEach(th => {
+                if (th.textContent.trim() === 'Aksi') {
+                    th.remove();
+                }
+            });
+
+            // Ganti Input/Textarea dengan Nilai mereka agar muncul di PDF
+            cleanContent.querySelectorAll('input, textarea, select').forEach(el => {
+                let value = '';
+                if (el.tagName === 'SELECT') {
+                    value = el.options[el.selectedIndex].text.replace('-- Pilih Kelas --', '');
+                } else {
+                    value = el.value.trim() || '____________________';
+                }
+                
+                const span = document.createElement('span');
+                span.textContent = value;
+                span.style.fontWeight = 'bold'; 
+                span.style.display = 'block'; 
+                span.style.whiteSpace = 'pre-wrap';
+                
+                el.parentNode.replaceChild(span, el);
+            });
+            
+            // Masukkan konten yang sudah dibersihkan kembali ke elemen sementara untuk konversi
+            content.innerHTML = cleanContent.innerHTML;
+
+            // 2. Proses Konversi HTML ke Canvas lalu ke PDF
+            window.jsPDF = window.jspdf.jsPDF;
+            const pdf = new jsPDF('p', 'mm', 'a4'); 
+            const margin = 10;
+            const pageWidth = pdf.internal.pageSize.getWidth() - 2 * margin;
+
+            html2canvas(content, {
+                scale: 2, // Meningkatkan kualitas gambar
+                useCORS: true, // Untuk menangani logo
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const imgProps = pdf.getImageProperties(imgData);
+                const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+
+                pdf.addImage(imgData, 'PNG', margin, position + margin, pageWidth, imgHeight);
+                heightLeft -= pdf.internal.pageSize.getHeight();
+                
+                // Menangani Multipage
+                while (heightLeft > -100) { // Toleransi kecil
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', margin, position + margin, pageWidth, imgHeight);
+                    heightLeft -= pdf.internal.pageSize.getHeight();
+                }
+
+                pdf.save(`LKPD_Tebu_${document.getElementById('group-class').value || 'Kelompok'}.pdf`);
+                
+                // 3. Mengembalikan konten asli ke halaman setelah konversi selesai
+                content.innerHTML = originalContents; 
+                alert('File LKPD berhasil diunduh sebagai PDF!');
+                
+                // Memastikan input tetap berfungsi setelah konten dikembalikan
+                document.dispatchEvent(new Event('DOMContentLoaded'));
+            });
+        }
+        
+        // --- FUNGSI INSTRUKSI WHATSAPP ---
+        function shareToWhatsApp() {
+            const classValue = document.getElementById('group-class').value || 'kelompok Anda';
+
+            const message = `*INSTRUKSI PENGIRIMAN FILE LKPD*\n\n` +
+                            `Halo, saya perwakilan dari ${classValue}.\n\n` +
+                            `1. Tekan tombol *💾 Unduh sebagai PDF* di halaman LKPD.\n` +
+                            `2. Cari file PDF yang baru diunduh (nama file: LKPD_Tebu_...). \n` +
+                            `3. Bagikan file PDF tersebut secara manual ke grup atau guru yang dituju.\n\n` +
+                            `Terima kasih!`;
+            
+            const encodedMessage = encodeURIComponent(message);
+            
+            // Memberikan instruksi dan kemudian membuka WhatsApp dengan pesan instruksi
+            alert('PERHATIAN: Tidak bisa mengirim file PDF langsung ke WhatsApp. Anda akan diarahkan ke WhatsApp untuk mengirim pesan INSTRUKSI. Mohon unduh file PDF terlebih dahulu!');
+            window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+        }
+
+        // --- FUNGSI PRATINJAU (PREVIEW) & MODAL ---
+        
+        function getCleanedLKPDContent() {
+            // ... (Fungsi yang sama seperti sebelumnya untuk pratinjau, tidak diubah) ...
+            const contentElement = document.getElementById('lkpd-content').cloneNode(true);
+            
+            contentElement.querySelector('.action-container').remove();
+            contentElement.querySelectorAll('.btn-remove, .btn-add, .btn-show-list').forEach(btn => btn.remove());
+            
+            contentElement.querySelectorAll('#tabel-anggota th:last-child, #tabel-pertanyaan th:last-child, #tabel-kolaborasi th:last-child').forEach(th => {
+                if (th.textContent.trim() === 'Aksi') {
+                    th.remove();
+                }
+            });
+
+            const classSelect = contentElement.querySelector('#group-class');
+            const guruInput = contentElement.querySelector('#guru-pendamping');
+            const formGroupIdentitas = classSelect ? classSelect.closest('.form-group-inline') : null;
+            
+            if (formGroupIdentitas) {
+                const classValue = classSelect.options[classSelect.selectedIndex].text || '____________________ (Belum dipilih)';
+                const guruValue = guruInput.value.trim() || '____________________ (Belum diisi)';
+
+                const displayHtml = `
+                    <p style="font-weight: 600; margin-bottom: 10px; border: 1px dashed #ccc; padding: 10px; background: #f9f9f9;">
+                        <span>Kelas: </span><b style="color: #4682B4;">${classValue}</b> 
+                        <span style="margin-left: 30px;">Guru Pendamping: </span><b style="color: #4682B4;">${guruValue}</b>
+                    </p>
+                `;
+                
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = displayHtml;
+                formGroupIdentitas.parentNode.replaceChild(tempDiv.firstChild, formGroupIdentitas);
+            }
+
+            contentElement.querySelectorAll('input, textarea').forEach(el => {
+                const value = el.value.trim() || '____________________ (Belum diisi)';
+                const p = document.createElement(el.tagName === 'TEXTAREA' ? 'div' : 'span');
+                p.textContent = value;
+                p.style.fontWeight = 'bold';
+                p.style.display = 'block';
+                p.style.whiteSpace = 'pre-wrap';
+                
+                if (!el.closest('#tabel-biaya')) {
+                    el.parentNode.replaceChild(p, el);
+                } else if (el.closest('td').className !== 'summary-total' && el.type !== 'number' && el.type !== 'date') {
+                    el.parentNode.replaceChild(p, el);
+                } else if (el.type === 'number' || el.type === 'date') {
+                    const span = document.createElement('span');
+                    span.textContent = el.value;
+                    el.parentNode.replaceChild(span, el);
+                }
+            });
+
+            return contentElement.innerHTML;
+        }
+
+        function showPreview() {
+            const previewBody = document.getElementById('preview-body');
+            const modal = document.getElementById('preview-modal');
+            
+            previewBody.innerHTML = getCleanedLKPDContent();
+            modal.style.display = "block";
+        }
+
+        function closePreview() {
+            document.getElementById('preview-modal').style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            const previewModal = document.getElementById('preview-modal');
+            const guruModal = document.getElementById('guru-modal');
+            if (event.target == previewModal) {
+                previewModal.style.display = "none";
+            }
+            if (event.target == guruModal) {
+                guruModal.style.display = "none";
+            }
+        }
+        
+        // --- FUNGSI DOWNLOAD KE MS. WORD (DINONAKTIFKAN, DIGANTI DOWNLOAD PDF) ---
+        /*
+        function downloadWord() {
+            // ... (Logic for Word download) ...
+        }
+        */
+        
+    </script>
+</body>
+</html>

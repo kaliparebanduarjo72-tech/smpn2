@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LKPD: Budidaya Tanaman Tebu Interaktif</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
     <style>
         /* --- 1. GENERAL & BASE STYLING (UNTUK TAMPILAN RAPI) --- */
         body {
@@ -229,7 +230,6 @@
         }
 
         /* --- 4. PRINT STYLING (Untuk Kertas Legal dan Margin 2cm) --- */
-        /* PENTING: Style ini memastikan input terlihat rapi saat dicetak/disimpan ke PDF */
         @media print {
             @page {
                 size: legal; 
@@ -242,7 +242,6 @@
                 color: #000;
             }
             
-            /* Sembunyikan semua kecuali container */
             body > *:not(.container) {
                 display: none;
             }
@@ -254,22 +253,19 @@
                 border-radius: 0;
             }
             
-            /* Sembunyikan tombol-tombol aksi saat mencetak */
             .action-container, .btn, .btn-remove, .btn-add, header, .btn-show-list {
                 display: none !important;
             }
             
-            /* Pastikan Input dan Select terlihat seperti teks */
             input, select, textarea {
                 border: none !important;
                 background-color: transparent !important;
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
-                font-weight: bold; /* Teks isian lebih tebal */
+                font-weight: bold; 
                 padding: 0 !important;
             }
 
-            /* Hapus Border pada Input/Textarea jika ada */
             table input[type="text"], table input[type="number"], table textarea, select {
                 border: none !important;
             }
@@ -280,7 +276,6 @@
                 height: 70%;
             }
             
-            /* Pastikan warna latar belakang tercetak (penting untuk summary/header tabel) */
             .summary-row td, .keuntungan-row td, table th {
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact; 
@@ -292,7 +287,6 @@
         .modal-content { background-color: #fefefe; margin: 5% auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 700px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
         .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
         
-        /* Loading overlay (dihapus karena tidak dibutuhkan lagi) */
     </style>
 </head>
 <body>
@@ -328,6 +322,11 @@
                     <option value="9B">9B</option>
                 </select>
                 
+                <label for="group-name">Nama Kelompok:</label>
+                <input type="text" id="group-name" name="group-name" placeholder="Contoh: Kelompok Tebu Manis" style="flex-grow: 1;">
+            </div>
+            
+            <div class="form-group-inline" style="margin-top: 10px;">
                 <label for="guru-pendamping">Guru Pendamping:</label>
                 <div class="guru-pendamping-group">
                     <input type="text" id="guru-pendamping" name="guru-pendamping" placeholder="Nama Guru Pendamping" style="flex-grow: 1;">
@@ -567,7 +566,6 @@
             
             function formatRupiah(number) {
                 if (isNaN(number)) return '0';
-                // Menggunakan IDR locale untuk format Rupiah
                 return number.toLocaleString('id-ID'); 
             }
 
@@ -579,7 +577,6 @@
                     return costPerUnit * quantity;
                 } else if (row === 6) { 
                     const hasilPanenInput = document.querySelector(`.input-unit-cost[data-row="5"]`);
-                    // Gunakan nilai input hasil panen (row 5) sebagai kuantitas untuk row 6 (harga jual rata-rata)
                     quantity = parseFloat(hasilPanenInput.value) || 0;
                     return costPerUnit * quantity;
                 }
@@ -690,18 +687,19 @@
             }
         }
 
-        // --- FUNGSI BARU: PRINT/SAVE TO PDF ---
+        // --- FUNGSI PRINT/SAVE TO PDF ---
         function printPDF() {
-            // Memanggil fungsi cetak bawaan browser
             window.print();
         }
         
         // --- FUNGSI INSTRUKSI WHATSAPP ---
         function shareToWhatsApp() {
-            const classValue = document.getElementById('group-class').value || 'kelompok Anda';
+            const className = document.getElementById('group-class').value;
+            const groupName = document.getElementById('group-name').value;
+            const identifier = groupName || className || 'kelompok Anda';
 
             const message = `*INSTRUKSI PENGIRIMAN FILE LKPD*\n\n` +
-                            `Halo, saya perwakilan dari ${classValue}.\n\n` +
+                            `Halo, saya perwakilan dari ${identifier}.\n\n` +
                             `1. Tekan tombol *🖨️ Cetak / Simpan ke PDF*.\n` +
                             `2. Pada dialog yang muncul, ubah *Tujuan* menjadi *Simpan sebagai PDF* (atau *Save as PDF*).\n` +
                             `3. Simpan file tersebut ke perangkat Anda. \n` +
@@ -710,7 +708,6 @@
             
             const encodedMessage = encodeURIComponent(message);
             
-            // Memberikan instruksi dan kemudian membuka WhatsApp dengan pesan instruksi
             alert('PERHATIAN: Anda akan diarahkan ke dialog Cetak browser. Pilih "Simpan sebagai PDF" di sana untuk menyimpan file. Setelah ini, Anda akan diarahkan ke WhatsApp untuk mengirim pesan INSTRUKSI.');
             window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
         }
@@ -718,7 +715,6 @@
         // --- FUNGSI PRATINJAU (PREVIEW) & MODAL ---
         
         function getCleanedLKPDContent() {
-            // Fungsi ini membantu menampilkan pratinjau data yang sudah diisi
             const contentElement = document.getElementById('lkpd-content').cloneNode(true);
             
             contentElement.querySelector('.action-container').remove();
@@ -731,24 +727,41 @@
             });
 
             const classSelect = contentElement.querySelector('#group-class');
+            const groupInput = contentElement.querySelector('#group-name');
             const guruInput = contentElement.querySelector('#guru-pendamping');
-            const formGroupIdentitas = classSelect ? classSelect.closest('.form-group-inline') : null;
             
-            if (formGroupIdentitas) {
+            const formGroups = contentElement.querySelectorAll('.form-group-inline');
+
+            if (formGroups.length >= 2) {
                 const classValue = classSelect.options[classSelect.selectedIndex].text || '____________________ (Belum dipilih)';
+                const groupNameValue = groupInput.value.trim() || '____________________ (Belum diisi)';
                 const guruValue = guruInput.value.trim() || '____________________ (Belum diisi)';
 
-                const displayHtml = `
-                    <p style="font-weight: 600; margin-bottom: 10px; border: 1px dashed #ccc; padding: 10px; background: #f9f9f9;">
+                // Gabungkan informasi Kelas dan Nama Kelompok ke dalam satu display
+                const displayHtml1 = `
+                    <p style="font-weight: 600; margin-bottom: 5px; border: 1px dashed #ccc; padding: 10px 15px; background: #f9f9f9;">
                         <span>Kelas: </span><b style="color: #4682B4;">${classValue}</b> 
-                        <span style="margin-left: 30px;">Guru Pendamping: </span><b style="color: #4682B4;">${guruValue}</b>
+                        <span style="margin-left: 30px;">Nama Kelompok: </span><b style="color: #4682B4;">${groupNameValue}</b>
                     </p>
                 `;
                 
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = displayHtml;
-                formGroupIdentitas.parentNode.replaceChild(tempDiv.firstChild, formGroupIdentitas);
+                const tempDiv1 = document.createElement('div');
+                tempDiv1.innerHTML = displayHtml1;
+                
+                // Ganti form group pertama (Kelas & Nama Kelompok)
+                formGroups[0].parentNode.replaceChild(tempDiv1.firstChild, formGroups[0]);
+
+                // Ganti form group kedua (Guru Pendamping)
+                const displayHtml2 = `
+                    <p style="font-weight: 600; margin-top: 5px;">
+                        <span>Guru Pendamping: </span><b style="color: #4682B4;">${guruValue}</b>
+                    </p>
+                `;
+                const tempDiv2 = document.createElement('div');
+                tempDiv2.innerHTML = displayHtml2;
+                formGroups[1].parentNode.replaceChild(tempDiv2.firstChild, formGroups[1]);
             }
+
 
             contentElement.querySelectorAll('input, textarea').forEach(el => {
                 const value = el.value.trim() || '____________________ (Belum diisi)';
